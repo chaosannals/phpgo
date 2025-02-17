@@ -379,15 +379,72 @@ func UnSerialize(data []byte) (any, error) {
 // ============================================================================
 // 填充数据
 
-// TODO
-func fillData[T any](src any, v T) error {
+func fillMap(m map[string]any, fv reflect.Value) error {
+	rm := reflect.MakeMap(reflect.TypeOf(m))
+	for k, v := range m {
+		rm.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+	}
+	fv.Set(rm)
+	return nil
+}
+
+func fillStruct(src map[string]any, vt reflect.Type, vv reflect.Value) error {
+	// 遍历字段
+	for i := 0; i < vt.NumField(); i++ {
+		ft := vt.Field(i)
+		fv := vv.Field(i)
+
+		fn := ft.Tag.Get("php")
+		if v, ok := src[fn]; ok {
+			fk := ft.Type.Kind()
+			switch fk {
+			case reflect.Int:
+				if i, ok := v.(int); ok {
+					fv.SetInt(int64(i))
+				}
+			case reflect.String:
+				if s, ok := v.(string); ok {
+					fv.SetString(s)
+				}
+			case reflect.Slice:
+				if s, ok := v.([]any); ok {
+					rs := reflect.MakeSlice(ft.Type, len(s), len(s))
+					for i := 0; i < len(s); i++ {
+						rs.Index(i).Set(reflect.ValueOf(s[i]))
+					}
+					fv.Set(rs)
+					// fmt.Printf("slice %v\n", s)
+				}
+			case reflect.Map:
+				if m, ok := v.(map[string]any); ok {
+					if err := fillMap(m, fv); err != nil {
+						return err
+					}
+				}
+			case reflect.Struct:
+				if m, ok := v.(map[string]any); ok {
+					if err := fillStruct(m, ft.Type, fv); err != nil {
+						return err
+					}
+				}
+			}
+			// fmt.Printf("fk: %v %v\n", fk, ft)
+		}
+	}
+	return nil
+}
+
+func fillData[T any](src map[string]any, v T) error {
 	vt := reflect.TypeOf(v)
-	fmt.Printf("kind: %v\n", vt.Kind())
-	if vt.Kind() == reflect.Ptr {
-		vt = vt.Elem()
+	if vt.Kind() != reflect.Ptr {
+		return fmt.Errorf("root target value must a pointer '%s'", vt.Name())
+	}
+	vt = vt.Elem()
+	if vt.Kind() != reflect.Struct {
+		return fmt.Errorf("root target value must a struct pointer '%s'", vt.Name())
 	}
 
-	return nil
+	return fillStruct(src, vt, reflect.ValueOf(v).Elem())
 }
 
 func UnSerializeTo[T any](data []byte, v T) error {
@@ -396,7 +453,11 @@ func UnSerializeTo[T any](data []byte, v T) error {
 	if err != nil {
 		return err
 	}
+	m, ok := r.(map[string]any)
+	if !ok {
+		return fmt.Errorf("UnSerialize result must a map[string]any")
+	}
 
 	// 填充数据
-	return fillData(r, v)
+	return fillData(m, v)
 }
