@@ -9,8 +9,10 @@ import (
 )
 
 type ObjectDemoE struct {
-	C string `php:"c"`
-	D []int  `php:"\x00Demo\\Ns\\DemoE\x00d"` // 私有变量特有命名规则
+	C string  `php:"c"`
+	D []int   `php:"\x00Demo\\Ns\\DemoE\x00d"` // 私有变量特有命名规则
+	F float64 `php:"f"`
+	N any     `php:"n"`
 }
 
 type ObjectDemoA struct {

@@ -6,11 +6,13 @@ class DemoE {
     public $c;
     private $d;
     public $f;
+    public $n;
 
     public function __construct($c, $d) {
         $this->c = $c;
         $this->d = $d;
         $this->f = 123.456;
+        $this->n = null;
     }
 
     public function getD() {

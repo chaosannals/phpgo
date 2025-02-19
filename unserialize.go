@@ -375,6 +375,10 @@ func matchNull(serializer *unSerializer) (any, error) {
 	if serializer.get() != 'N' {
 		return nil, fmt.Errorf("[%d]not a null type 'N'", serializer.index)
 	}
+
+	if serializer.get() != ';' {
+		return 0, fmt.Errorf("[%d]not a null end tag ; ", serializer.index)
+	}
 	return nil, nil
 }
 
@@ -410,6 +414,10 @@ func fillStruct(src map[string]any, vt reflect.Type, vv reflect.Value) error {
 			case reflect.Int:
 				if i, ok := v.(int); ok {
 					fv.SetInt(int64(i))
+				}
+			case reflect.Float64:
+				if f, ok := v.(float64); ok {
+					fv.SetFloat(f)
 				}
 			case reflect.String:
 				if s, ok := v.(string); ok {
