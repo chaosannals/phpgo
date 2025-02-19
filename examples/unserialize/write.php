@@ -5,10 +5,12 @@ namespace Demo\Ns;
 class DemoE {
     public $c;
     private $d;
+    public $f;
 
     public function __construct($c, $d) {
         $this->c = $c;
         $this->d = $d;
+        $this->f = 123.456;
     }
 
     public function getD() {

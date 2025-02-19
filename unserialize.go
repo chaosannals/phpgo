@@ -122,6 +122,8 @@ func matchType(serializer *unSerializer) (any, error) {
 		return matchString(serializer)
 	case 'i':
 		return matchInteger(serializer)
+	case 'd':
+		return matchFloat(serializer)
 	case 'b':
 		return matchBool(serializer)
 	case 'N':
@@ -182,9 +184,6 @@ func matchObject(serializer *unSerializer) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		if serializer.get() != ';' {
-			return nil, fmt.Errorf("[%d]not a object filed key end ;", serializer.index)
-		}
 
 		// value
 		value, err := matchType(serializer)
@@ -193,14 +192,6 @@ func matchObject(serializer *unSerializer) (any, error) {
 		}
 
 		result[key] = value
-
-		if serializer.peek(-1) == '}' {
-			continue
-		}
-
-		if serializer.get() != ';' {
-			return nil, fmt.Errorf("[%d]not a object filed value end ; ", serializer.index)
-		}
 	}
 
 	if serializer.get() != '}' {
@@ -250,18 +241,11 @@ func matchList(serializer *unSerializer, n int) ([]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		if serializer.get() != ';' {
-			return nil, fmt.Errorf("[%d]not a list index end ;", serializer.index)
-		}
 
 		// value
 		value, err := matchType(serializer)
 		if err != nil {
 			return nil, err
-		}
-
-		if serializer.get() != ';' {
-			return nil, fmt.Errorf("[%d]not a list value end ;", serializer.index)
 		}
 
 		result[index] = value
@@ -282,18 +266,11 @@ func matchMap(serializer *unSerializer, n int) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		if serializer.get() != ';' {
-			return nil, fmt.Errorf("[%d]not a map filed key end ;", serializer.index)
-		}
 
 		// value
 		value, err := matchType(serializer)
 		if err != nil {
 			return nil, err
-		}
-
-		if serializer.get() != ';' {
-			return nil, fmt.Errorf("[%d]not a map filed value end ;", serializer.index)
 		}
 
 		result[key] = value
@@ -329,6 +306,10 @@ func matchString(serializer *unSerializer) (string, error) {
 		return "", fmt.Errorf("[%d]not a string len %d != %d", serializer.index, len(s), n)
 	}
 
+	if serializer.get() != ';' {
+		return "", fmt.Errorf("[%d]not a string tag end ;", serializer.index)
+	}
+
 	return s, nil
 }
 
@@ -345,7 +326,35 @@ func matchInteger(serializer *unSerializer) (int, error) {
 		return 0, err
 	}
 
+	if serializer.get() != ';' {
+		return 0, fmt.Errorf("[%d]not a integer tag end ;", serializer.index)
+	}
+
 	return n, nil
+}
+
+func matchFloat(serializer *unSerializer) (float64, error) {
+	if serializer.get() != 'd' {
+		return 0, fmt.Errorf("[%d]not a float type 'd'", serializer.index)
+	}
+	if serializer.get() != ':' {
+		return 0, fmt.Errorf("[%d]not a float tag : ", serializer.index)
+	}
+	h, err := serializer.pickNumber('.')
+	if err != nil {
+		return 0, err
+	}
+	if serializer.get() != '.' {
+		return 0, fmt.Errorf("[%d]not a float tag . ", serializer.index)
+	}
+	t, err := serializer.pickNumber(';')
+	if err != nil {
+		return 0, err
+	}
+	if serializer.get() != ';' {
+		return 0, fmt.Errorf("[%d]not a float tag ; ", serializer.index)
+	}
+	return strconv.ParseFloat(fmt.Sprintf("%d.%d", h, t), 64)
 }
 
 func matchBool(serializer *unSerializer) (bool, error) {
